@@ -36,8 +36,9 @@ class PcAdapter : RecyclerView.Adapter<PcAdapter.PcViewHolder>() {
             name.text = displayName
             val ip = item.ip ?: "N/A"
             val status = item.status ?: "Unknown"
-            val connectedText = if (item.connected == true) "Online" else "Offline"
-            details.text = "IP: $ip — Status: $status ($connectedText)"
+            // The `connected` flag is not reliable for real-time status in this view,
+            // so avoid showing it here to prevent confusing '(Offline)' labels.
+            details.text = "IP: $ip — Status: $status"
         }
     }
 }
