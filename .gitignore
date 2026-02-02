@@ -21,3 +21,6 @@ local.properties
 
 # Logs
 *.log
+gradle-8.13-bin.zip
+gradle-8.13/
+gradle-dist-temp/
