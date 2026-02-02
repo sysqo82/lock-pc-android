@@ -62,3 +62,8 @@ dependencies {
     }
     implementation 'org.json:json:20251224'
 }
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
