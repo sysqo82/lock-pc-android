@@ -37,7 +37,7 @@ android {
 androidComponents {
     onVariants(selector().all()) { variant ->
         variant.outputs.forEach { output ->
-            output.outputFileName = "lock-pc.apk"
+            output.outputFile.set(new File(output.outputFile.get().asFile.parentFile, "lock-pc.apk"))
         }
     }
 }
