@@ -34,14 +34,6 @@ android {
 
 }
 
-androidComponents {
-    onVariants(selector().all()) { variant ->
-        variant.outputs.forEach { output ->
-            output.outputFile.set(new File(output.outputFile.get().asFile.parentFile, "lock-pc.apk"))
-        }
-    }
-}
-
 // Configure Kotlin compile tasks when the Kotlin Gradle plugin is not explicitly applied
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { task ->
     task.kotlinOptions.jvmTarget = "1.8"
