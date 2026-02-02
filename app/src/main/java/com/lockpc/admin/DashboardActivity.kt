@@ -8,6 +8,9 @@ import android.content.IntentFilter
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.*
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.appcompat.widget.PopupMenu
@@ -53,6 +56,30 @@ class DashboardActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
+
+        // Apply status bar / cutout insets to header so icons aren't overlapped.
+        // Reduce the inset a bit so the header isn't pushed too far down.
+        val headerLayout = findViewById<android.view.View>(R.id.headerLayout)
+        ViewCompat.setOnApplyWindowInsetsListener(headerLayout) { v, insets ->
+            val sysBars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+            val reducePx = (resources.displayMetrics.density * 8).toInt() // reduce by ~8dp
+            val topPadding = (sysBars.top - reducePx).coerceAtLeast(0)
+            v.setPadding(v.paddingLeft, topPadding, v.paddingRight, v.paddingBottom)
+            insets
+        }
+
+        // Make status bar icons dark for better contrast on light backgrounds
+        WindowInsetsControllerCompat(window, headerLayout).isAppearanceLightStatusBars = true
+
+        // Ensure content can scroll above the navigation bar by adding bottom padding
+        val scrollView = findViewById<android.widget.ScrollView>(R.id.scrollView)
+        ViewCompat.setOnApplyWindowInsetsListener(scrollView) { v, insets ->
+            val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            // Add a small extra margin (16dp) above the nav bar so buttons aren't flush against it
+            val extra = (resources.displayMetrics.density * 16).toInt()
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, navBars.bottom + extra)
+            insets
+        }
 
         api = NetworkClient.create(ApiService::class.java)
 
