@@ -19,8 +19,6 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    // Kotlin JVM target is configured on the Kotlin compile tasks
-
     buildTypes {
         release {
             minifyEnabled false
@@ -31,24 +29,20 @@ android {
     buildFeatures {
         viewBinding true
     }
-
 }
 
-// Configure Kotlin compile tasks when the Kotlin Gradle plugin is not explicitly applied
+// Configure Kotlin compile tasks
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { task ->
     task.kotlinOptions.jvmTarget = "1.8"
 }
 
-// Copy and rename APK after assembly
-android.applicationVariants.all { variant ->
-    variant.outputs.all { output ->
-        def copyTask = tasks.register("copy${variant.name.capitalize()}Apk", Copy) {
-            from(output.outputFile)
-            into(output.outputFile.parentFile)
-            rename { "lock-pc.apk" }
+// Configure output APK name using the new androidComponents API
+androidComponents {
+    onVariants(selector().all(), { variant ->
+        variant.outputs.each { output ->
+            output.outputFileName.set("lock-pc.apk")
         }
-        variant.assembleProvider.get().finalizedBy(copyTask)
-    }
+    })
 }
 
 dependencies {
@@ -74,6 +68,7 @@ dependencies {
     }
     implementation 'org.json:json:20251224'
 }
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
