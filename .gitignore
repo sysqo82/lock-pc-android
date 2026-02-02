@@ -1,0 +1,23 @@
+# .gitignore for lock-pc-android (Android/Gradle)
+
+# Gradle
+.gradle/
+build/
+
+# Local configuration
+local.properties
+
+# Keystore files
+*.jks
+*.keystore
+
+# IDE files
+.idea/
+.gradle/
+*.iml
+
+# Android Studio
+.cxx/
+
+# Logs
+*.log
