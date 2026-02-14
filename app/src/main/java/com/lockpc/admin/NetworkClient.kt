@@ -25,6 +25,8 @@ object NetworkClient {
                 if (!token.isNullOrEmpty()) {
                     reqBuilder.addHeader("Authorization", "Bearer $token")
                 }
+                    // Add bypass header to avoid tunnel password pages when using proxies/tunnels
+                    reqBuilder.addHeader("bypass-tunnel-reminder", "true")
             } catch (_: Exception) {
             }
             chain.proceed(reqBuilder.build())
