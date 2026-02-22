@@ -46,7 +46,20 @@ class BlockPeriodAdapter(
         fun bind(item: BlockPeriod) {
             timeRange.text = "${item.from} → ${item.to}"
             val dayList = item.days ?: emptyList()
-            days.text = if (dayList.isEmpty()) "Everyday" else dayList.joinToString(", ") { it.replaceFirstChar { c -> c.uppercase() } }
+            val dayText = run {
+                val normalized = dayList.map { it.lowercase() }.toSet()
+                val allDays = setOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+                val weekdaysSet = setOf("mon", "tue", "wed", "thu", "fri")
+                val weekendsSet = setOf("sat", "sun")
+
+                when {
+                    normalized.isEmpty() || normalized == allDays -> "Everyday"
+                    normalized == weekdaysSet -> "Weekdays"
+                    normalized == weekendsSet -> "Weekends"
+                    else -> dayList.joinToString(", ") { it.replaceFirstChar { c -> c.uppercase() } }
+                }
+            }
+            days.text = dayText
 
             btnEdit.setOnClickListener { onEdit(item) }
             btnDelete.setOnClickListener { onDelete(item) }
