@@ -1,5 +1,8 @@
 # .gitignore for lock-pc-android (Android/Gradle)
 
+# Kotlin compiler artefacts
+.kotlin/
+
 # Gradle
 .gradle/
 build/

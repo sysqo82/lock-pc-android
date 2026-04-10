@@ -38,6 +38,15 @@ data class LoginTokenResponse(
     val token: String?
 )
 
+data class DeviceLocation(
+    val device_id: String,
+    val latitude: Double,
+    val longitude: Double,
+    val accuracy: Float?,
+    val timestamp: Long?,
+    val updated_at: String?
+)
+
 interface ApiService {
     @FormUrlEncoded
     @POST("login")
@@ -73,4 +82,7 @@ interface ApiService {
 
     @GET("logout")
     suspend fun logout(): Response<ResponseBody>
+
+    @GET("api/location/current")
+    suspend fun getCurrentLocation(): Response<List<DeviceLocation>>
 }

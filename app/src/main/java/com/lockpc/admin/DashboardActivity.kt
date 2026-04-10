@@ -152,6 +152,11 @@ class DashboardActivity : AppCompatActivity() {
             resetForm(dayCheckboxes, txtFromTime, txtToTime)
         }
 
+        val btnCheckLocation: android.widget.Button = findViewById(R.id.btnCheckLocation)
+        btnCheckLocation.setOnClickListener {
+            startActivity(Intent(this, LocationActivity::class.java))
+        }
+
         btnMenu.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             popup.menuInflater.inflate(R.menu.dashboard_menu, popup.menu)
