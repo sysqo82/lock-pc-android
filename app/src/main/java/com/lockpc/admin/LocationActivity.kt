@@ -8,7 +8,6 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -21,17 +20,21 @@ import java.util.TimeZone
 
 class LocationActivity : AppCompatActivity() {
 
+    private lateinit var api: ApiService
+    private lateinit var webView: WebView
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_location)
 
         supportActionBar?.apply {
-            title = "Check Location"
+            title = "Device Locations"
             setDisplayHomeAsUpEnabled(true)
         }
 
-        val webView: WebView = findViewById(R.id.mapWebView)
+        api = NetworkClient.create(ApiService::class.java)
+        webView = findViewById(R.id.mapWebView)
         val progress: ProgressBar = findViewById(R.id.mapProgress)
         val txtError: TextView = findViewById(R.id.txtMapError)
 
@@ -44,24 +47,19 @@ class LocationActivity : AppCompatActivity() {
         webView.webChromeClient = WebChromeClient()
 
         lifecycleScope.launch {
-            val api = NetworkClient.create(ApiService::class.java)
-            try {
-                val response = withContext(Dispatchers.IO) { api.getCurrentLocation() }
-                progress.visibility = View.GONE
-                if (!response.isSuccessful || response.body().isNullOrEmpty()) {
-                    txtError.text = "No location data available yet."
-                    txtError.visibility = View.VISIBLE
-                    return@launch
-                }
-                val loc = response.body()!![0]
-                val html = buildMapHtml(loc)
-                webView.loadDataWithBaseURL("https://unpkg.com/", html, "text/html", "utf-8", null)
-                webView.visibility = View.VISIBLE
-            } catch (e: Exception) {
-                progress.visibility = View.GONE
-                Toast.makeText(this@LocationActivity, "Failed to load location: ${e.message}", Toast.LENGTH_LONG).show()
-                finish()
+            val response = withContext(Dispatchers.IO) {
+                try { api.getCurrentLocation() } catch (e: Exception) { null }
             }
+            progress.visibility = View.GONE
+            val locs = response?.body()
+            if (response == null || !response.isSuccessful || locs.isNullOrEmpty()) {
+                txtError.text = "No location data available yet."
+                txtError.visibility = View.VISIBLE
+                return@launch
+            }
+            val html = buildMapHtml(locs)
+            webView.loadDataWithBaseURL("https://unpkg.com/", html, "text/html", "utf-8", null)
+            webView.visibility = View.VISIBLE
         }
     }
 
@@ -70,53 +68,54 @@ class LocationActivity : AppCompatActivity() {
         return true
     }
 
-    private fun buildMapHtml(loc: DeviceLocation): String {
-        val lat = loc.latitude
-        val lng = loc.longitude
-        val accuracy = loc.accuracy?.let { "~${it.toInt()} m" } ?: "N/A"
-
-        val updatedAt = loc.updated_at?.let {
+    private fun formatTime(updatedAt: String?, timestamp: Long?): String {
+        return updatedAt?.let {
             try {
                 val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
                 sdf.timeZone = TimeZone.getTimeZone("UTC")
                 val date = sdf.parse(it.substringBefore('.')) ?: Date()
-                val local = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
-                local.format(date)
+                SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(date)
             } catch (e: Exception) { it }
-        } ?: loc.timestamp?.let {
+        } ?: timestamp?.let {
             SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(it))
         } ?: "Unknown"
+    }
 
-        return """
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<style>
-  html, body, #map { margin:0; padding:0; width:100%; height:100%; }
-</style>
-</head>
-<body>
-<div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-  var map = L.map('map').setView([$lat, $lng], 15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-  L.marker([$lat, $lng]).addTo(map)
-    .bindPopup('<b>Last known location</b><br>$lat, $lng<br>Accuracy: $accuracy<br>Updated: $updatedAt')
-    .openPopup();
-</script>
-</body>
-</html>
-        """.trimIndent()
-            .replace("\$lat", lat.toString())
-            .replace("\$lng", lng.toString())
-            .replace("\$accuracy", accuracy)
-            .replace("\$updatedAt", updatedAt)
+    private fun buildMapHtml(locs: List<DeviceLocation>): String {
+        val markers = StringBuilder()
+        for (loc in locs) {
+            val lat = loc.latitude
+            val lng = loc.longitude
+            val accuracy = if (loc.accuracy != null) "~${loc.accuracy.toInt()} m" else "N/A"
+            val time = formatTime(loc.updated_at, loc.timestamp)
+            val model = (loc.device_model ?: "Unknown device").replace("'", "\\'").replace("\"", "\\\"")
+            val email = (loc.user_email ?: "").replace("'", "\\'")
+            val emailPart = if (email.isNotEmpty()) "<br>User: $email" else ""
+            val popup = "<b>$model</b>$emailPart<br>$lat, $lng<br>Accuracy: $accuracy<br>Updated: $time"
+            markers.append("  L.marker([$lat, $lng]).addTo(map).bindPopup('${popup.replace("'", "\\'")}');\n")
+            markers.append("  bounds.push([$lat, $lng]);\n")
+        }
+
+        val firstLat = locs[0].latitude
+        val firstLng = locs[0].longitude
+
+        val markersStr = markers.toString()
+        return "<!DOCTYPE html>\n" +
+            "<html>\n<head>\n" +
+            "<meta charset=\"utf-8\"/>\n" +
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>\n" +
+            "<link rel=\"stylesheet\" href=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.css\"/>\n" +
+            "<style>html,body,#map{margin:0;padding:0;width:100%;height:100%;}</style>\n" +
+            "</head>\n<body>\n<div id=\"map\"></div>\n" +
+            "<script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\"></script>\n" +
+            "<script>\n" +
+            "  var map = L.map('map').setView([$firstLat, $firstLng], 15);\n" +
+            "  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {\n" +
+            "    maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'\n" +
+            "  }).addTo(map);\n" +
+            "  var bounds = [];\n" +
+            markersStr +
+            "  if (bounds.length > 1) map.fitBounds(bounds, {padding:[40,40]});\n" +
+            "</script>\n</body>\n</html>"
     }
 }
