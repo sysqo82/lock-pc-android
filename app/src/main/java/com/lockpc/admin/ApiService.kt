@@ -44,8 +44,13 @@ data class DeviceLocation(
     val longitude: Double,
     val accuracy: Float?,
     val timestamp: Long?,
-    val updated_at: String?
+    val updated_at: String?,
+    val device_model: String?,
+    val user_id: Int?,
+    val user_email: String?
 )
+
+data class ForceLogoutRequest(val deviceId: String)
 
 interface ApiService {
     @FormUrlEncoded
@@ -85,4 +90,10 @@ interface ApiService {
 
     @GET("api/location/current")
     suspend fun getCurrentLocation(): Response<List<DeviceLocation>>
+
+    @POST("api/admin/force-logout/{userId}")
+    suspend fun forceLogoutDevice(
+        @Path("userId") userId: Int,
+        @Body body: ForceLogoutRequest
+    ): Response<ResponseBody>
 }
