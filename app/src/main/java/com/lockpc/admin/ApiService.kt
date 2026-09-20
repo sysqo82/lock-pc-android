@@ -52,6 +52,18 @@ data class DeviceLocation(
 
 data class ForceLogoutRequest(val deviceId: String)
 
+data class CommandRequest(
+    val id: String,
+    val command: String
+)
+
+data class PauseBlockRequest(
+    val pcId: String?,
+    val durationMinutes: Long?,
+    val untilEndOfSession: Boolean?,
+    val endTimestampMs: Long?
+)
+
 interface ApiService {
     @FormUrlEncoded
     @POST("login")
@@ -95,5 +107,15 @@ interface ApiService {
     suspend fun forceLogoutDevice(
         @Path("userId") userId: Int,
         @Body body: ForceLogoutRequest
+    ): Response<ResponseBody>
+
+    @POST("api/command")
+    suspend fun sendCommand(
+        @Body body: CommandRequest
+    ): Response<ResponseBody>
+
+    @POST("api/pc/pause")
+    suspend fun pauseBlock(
+        @Body body: PauseBlockRequest
     ): Response<ResponseBody>
 }

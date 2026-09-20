@@ -17,6 +17,35 @@ class BlockPeriodAdapter(
     fun submitList(list: List<BlockPeriod>) {
         items.clear()
         items.addAll(list)
+
+        val pausedList = PauseRestoreManager.getAllPausedInfos()
+        for (info in pausedList) {
+            if (items.none { it.id == info.blockId }) {
+                items.add(
+                    BlockPeriod(
+                        id = info.blockId,
+                        from = info.originalFrom,
+                        to = info.originalTo,
+                        days = info.days
+                    )
+                )
+            }
+        }
+
+        val extendList = ExtendRestoreManager.getAllExtensionInfos()
+        for (info in extendList) {
+            if (items.none { it.id == info.blockId }) {
+                items.add(
+                    BlockPeriod(
+                        id = info.blockId,
+                        from = info.originalFrom,
+                        to = info.originalTo,
+                        days = info.days
+                    )
+                )
+            }
+        }
+
         notifyDataSetChanged()
     }
 
@@ -44,25 +73,34 @@ class BlockPeriodAdapter(
         private val btnDelete: Button = itemView.findViewById(R.id.btnDelete)
 
         fun bind(item: BlockPeriod) {
-            timeRange.text = "${item.from} → ${item.to}"
-            val dayList = item.days ?: emptyList()
-            val dayText = run {
-                val normalized = dayList.map { it.lowercase() }.toSet()
-                val allDays = setOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-                val weekdaysSet = setOf("mon", "tue", "wed", "thu", "fri")
-                val weekendsSet = setOf("sat", "sun")
+            val pauseInfo = PauseRestoreManager.getPausedInfo(item.id)
+            val extendInfo = ExtendRestoreManager.getExtensionInfo(item.id)
 
-                when {
-                    normalized.isEmpty() || normalized == allDays -> "Everyday"
-                    normalized == weekdaysSet -> "Weekdays"
-                    normalized == weekendsSet -> "Weekends"
-                    else -> dayList.joinToString(", ") { it.replaceFirstChar { c -> c.uppercase() } }
-                }
-            }
-            days.text = dayText
+            val displayFrom = pauseInfo?.originalFrom ?: extendInfo?.originalFrom ?: item.from
+            val displayTo = pauseInfo?.originalTo ?: extendInfo?.originalTo ?: item.to
+
+            timeRange.text = "$displayFrom → $displayTo"
+            days.text = formatDayText(item.days)
 
             btnEdit.setOnClickListener { onEdit(item) }
             btnDelete.setOnClickListener { onDelete(item) }
+        }
+    }
+
+    companion object {
+        fun formatDayText(dayList: List<String>?): String {
+            val list = dayList ?: emptyList()
+            val normalized = list.map { it.lowercase() }.toSet()
+            val allDays = setOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+            val weekdaysSet = setOf("mon", "tue", "wed", "thu", "fri")
+            val weekendsSet = setOf("sat", "sun")
+
+            return when {
+                normalized.isEmpty() || normalized == allDays -> "Everyday"
+                normalized == weekdaysSet -> "Weekdays"
+                normalized == weekendsSet -> "Weekends"
+                else -> list.joinToString(", ") { it.replaceFirstChar { c -> c.uppercase() } }
+            }
         }
     }
 }
