@@ -12,8 +12,8 @@ android {
         applicationId "com.lockpc.admin"
         minSdk 24
         targetSdk 36
-        versionCode 21
-        versionName "2.1"
+        versionCode 37
+        versionName "3.7"
     }
 
     compileOptions {
@@ -69,6 +69,9 @@ dependencies {
         exclude group: 'org.json', module: 'json'
     }
     implementation 'org.json:json:20251224'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
 }
 
 java {
